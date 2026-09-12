@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tsminal — Designed by KW</title>
+  <!-- Carbon Terminal icon as SVG favicon -->
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23f4f4f4' d='M26,4H6A2,2,0,0,0,4,6V26a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V6A2,2,0,0,0,26,4Zm0,2v4H6V6ZM6,26V12H26V26z'/%3E%3Cpolygon fill='%23f4f4f4' points='10.76 16.18 13.58 19.01 10.76 21.84 12.17 23.25 16.41 19.01 12.17 14.77 10.76 16.18'/%3E%3C/svg%3E">
+  <style>
+    /*
+     * IBM Carbon Design System v11 — Gray 100 (dark) / White (light)
+     * Token reference: https://carbondesignsystem.com/elements/color/tokens/
+     * TextArea spec:   https://carbondesignsystem.com/components/text-input/style/
+     * Spacing scale:   $spacing-03=8px $spacing-04=12px $spacing-05=16px $spacing-06=24px
+     * Typography:      $label-01 = 12px/400  $body-compact-01 = 14px/400
+     */
+
+    /* ── Carbon Gray 100 theme (dark default) ─────────────────────── */
+    :root {
+      /* Background / layer */
+      --c-background:        #161616; /* $background        */
+      --c-layer-01:          #262626; /* $layer-01          */
+      --c-layer-hover-01:    #333333; /* $layer-hover-01    */
+      /* Field */
+      --c-field-01:          #393939; /* $field-01 Gray 100 */
+      --c-field-hover-01:    #474747; /* $field-hover-01    */
+      /* Border */
+      --c-border-subtle-00:  #393939; /* $border-subtle-00  */
+      --c-border-strong-01:  #6f6f6f; /* $border-strong-01  */
+      --c-focus:             #ffffff; /* $focus (inverted)  */
+      /* Text */
+      --c-text-primary:      #f4f4f4; /* $text-primary      */
+      --c-text-secondary:    #c6c6c6; /* $text-secondary    */
+      --c-text-placeholder:  #6f6f6f; /* $text-placeholder  */
+      --c-text-helper:       #8d8d8d; /* $text-helper       */
+      /* Support */
+      --c-support-success:   #42be65; /* $support-success-inverse (dark) */
+      /* Icon */
+      --c-icon-secondary:    #c6c6c6; /* $icon-secondary    */
+      --c-icon-hover-bg:     #353535; /* ghost button hover */
+    }
+
+    /* ── Carbon White theme (light) ───────────────────────────────── */
+    :root[data-theme="light"] {
+      --c-background:        #ffffff; /* $background        */
+      --c-layer-01:          #f4f4f4; /* $layer-01          */
+      --c-layer-hover-01:    #e8e8e8; /* $layer-hover-01    */
+      --c-field-01:          #f4f4f4; /* $field-01          */
+      --c-field-hover-01:    #e8e8e8; /* $field-hover-01    */
+      --c-border-subtle-00:  #e0e0e0; /* $border-subtle-00  */
+      --c-border-strong-01:  #8d8d8d; /* $border-strong-01  */
+      --c-focus:             #0f62fe; /* $focus             */
+      --c-text-primary:      #161616; /* $text-primary      */
+      --c-text-secondary:    #525252; /* $text-secondary    */
+      --c-text-placeholder:  #a8a8a8; /* $text-placeholder  */
+      --c-text-helper:       #6f6f6f; /* $text-helper       */
+      --c-support-success:   #24a148; /* $support-success   */
+      --c-icon-secondary:    #525252; /* $icon-secondary    */
+      --c-icon-hover-bg:     #e8e8e8; /* ghost button hover */
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────── */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      background: #161616; /* always Gray 100 $background behind terminal */
+      font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 110%; /* 110% zoom for presentation — scales all rem values */
+    }
+
+    /* ── Layout ──────────────────────────────────────────────────── */
+    #layout {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    #terminal-panel {
+      flex: 0 0 70%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #terminal-panel iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* Carbon $border-subtle-00 — 1px divider between panels */
+    #divider {
+      flex: 0 0 1px;
+      height: 100%;
+      background: var(--c-border-subtle-00);
+    }
+
+    /* ── Notes panel — Carbon TextArea look & feel ───────────────── */
+    #notes-panel {
+      flex: 1;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--c-layer-01); /* $layer-01: panel sits on $background */
+    }
+
+    /*
+     * Toolbar — Carbon UI Shell action bar style
+     * Height: 40px ($size-md), padding: $spacing-03 (8px) / $spacing-05 (16px)
+     * Background: $background (one level up from the field)
+     * Border-bottom: $border-subtle-00
+     */
+    #notes-toolbar {
+      flex: 0 0 40px;
+      display: flex;
+      align-items: center;
+      padding: 0 8px 0 16px; /* $spacing-05 left, $spacing-03 right */
+      background: var(--c-background);
+      border-bottom: 1px solid var(--c-border-subtle-00);
+      gap: 4px; /* $spacing-02 — tight gap between action buttons */
+    }
+
+    /* "Notes" heading — Carbon $heading-compact-01: 14px / 600 */
+    #notes-title {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.28572;
+      letter-spacing: 0.16px;
+      color: var(--c-text-primary);
+      user-select: none;
+      white-space: nowrap;
+      margin-right: 8px; /* $spacing-03 gap between title and indicator */
+    }
+
+    #notes-title svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      flex-shrink: 0;
+    }
+
+    /* Save indicator — $label-01: 12px / 400, sits immediately after title */
+    #save-indicator {
+      flex: 0 0 auto;       /* shrinks to content width */
+      font-size: 0.75rem;   /* 12px — $label-01 */
+      font-weight: 400;
+      line-height: 1.333;
+      letter-spacing: 0.32px;
+      color: var(--c-text-helper);
+      user-select: none;
+      min-width: 4rem;      /* reserves space so buttons don't jump on save */
+    }
+
+    #save-indicator.saved {
+      color: var(--c-support-success);
+    }
+
+    /* Spacer — pushes action buttons flush to the right */
+    #toolbar-spacer {
+      flex: 1;
+    }
+
+    /*
+     * Ghost icon button — Carbon ghost variant (shared by both toolbar buttons)
+     * 32px square, no background at rest, hover: $icon-hover-bg
+     * Focus: 2px solid $focus (inset)
+     */
+    .toolbar-btn {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      background: transparent;
+      border: none;
+      border-radius: 0; /* Carbon buttons are square */
+      cursor: pointer;
+      color: var(--c-icon-secondary);
+      font-size: 16px;
+      line-height: 1;
+      padding: 0;
+      transition: background 70ms cubic-bezier(0.2, 0, 0.38, 0.9); /* Carbon fast-02 */
+    }
+
+    .toolbar-btn:hover        { background: var(--c-icon-hover-bg); }
+    .toolbar-btn:focus-visible {
+      outline: 2px solid var(--c-focus);
+      outline-offset: -2px;
+    }
+
+    /* active state: $layer-selected-01 tint */
+    .toolbar-btn[aria-pressed="true"] {
+      background: var(--c-icon-hover-bg);
+      color: var(--c-text-primary);
+    }
+
+    /* Icons are inline SVG — no ::after pseudo-content needed */
+    .toolbar-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      display: block;
+      pointer-events: none;
+    }
+
+    /*
+     * Notes body — stacking container; editor and preview occupy the same space.
+     * data-mode="edit"    → textarea visible, preview hidden
+     * data-mode="preview" → preview visible, textarea hidden
+     */
+    #notes-textarea-wrap {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    /* ── Editor pane ─────────────────────────────────────────── */
+    #notes {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: var(--c-field-01);
+      color: var(--c-text-primary);
+      /* Carbon TextArea border model */
+      border: none;
+      border-bottom: 1px solid var(--c-border-strong-01);
+      outline: none;
+      resize: none;
+      padding: 11px 16px; /* Carbon $spacing-05 horizontal */
+      font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 0.875rem; /* 14px — $body-compact-01 */
+      font-weight: 400;
+      line-height: 1.428;
+      letter-spacing: 0.16px;
+      overflow-y: auto;
+      transition: background 70ms cubic-bezier(0.2, 0, 0.38, 0.9);
+    }
+
+    #notes:hover  { background: var(--c-field-hover-01); }
+
+    /* Carbon focus ring: 2px solid $focus, inset */
+    #notes:focus {
+      outline: 2px solid var(--c-focus);
+      outline-offset: -2px;
+    }
+
+    #notes::placeholder {
+      color: var(--c-text-placeholder);
+      font-style: normal;
+    }
+
+    /* ── Preview pane ────────────────────────────────────────── */
+    #preview {
+      display: none; /* hidden in edit mode */
+      position: absolute;
+      inset: 0;
+      overflow-y: auto;
+      padding: 11px 16px;
+      background: var(--c-layer-01);
+      color: var(--c-text-primary);
+      font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      word-break: break-word;
+    }
+
+    /* Show preview / hide textarea when in preview mode */
+    #notes-textarea-wrap[data-mode="preview"] #notes   { display: none; }
+    #notes-textarea-wrap[data-mode="preview"] #preview { display: block; }
+
+    /* empty-state hint */
+    #preview:empty::before {
+      content: 'Nothing to preview';
+      color: var(--c-text-placeholder);
+      font-size: 0.75rem;
+    }
+
+    /* ── Markdown rendered content — Carbon type & colour tokens ─ */
+
+    /* Headings — Carbon productive heading scale */
+    #preview h1 {
+      font-size: 2rem;       /* $heading-05 */
+      font-weight: 300;
+      line-height: 1.25;
+      margin: 0 0 16px;
+      color: var(--c-text-primary);
+      border-bottom: 1px solid var(--c-border-subtle-00);
+      padding-bottom: 8px;
+    }
+    #preview h2 {
+      font-size: 1.5rem;     /* $heading-04 */
+      font-weight: 400;
+      line-height: 1.3;
+      margin: 24px 0 12px;
+      color: var(--c-text-primary);
+    }
+    #preview h3 {
+      font-size: 1.25rem;    /* $heading-03 */
+      font-weight: 400;
+      line-height: 1.4;
+      margin: 20px 0 8px;
+      color: var(--c-text-primary);
+    }
+    #preview h4, #preview h5, #preview h6 {
+      font-size: 0.875rem;   /* $heading-01 */
+      font-weight: 600;
+      line-height: 1.428;
+      margin: 16px 0 6px;
+      color: var(--c-text-primary);
+    }
+
+    /* Body copy */
+    #preview p {
+      margin: 0 0 12px;
+      color: var(--c-text-primary);
+    }
+
+    /* Lists */
+    #preview ul, #preview ol {
+      margin: 0 0 12px;
+      padding-left: 24px; /* $spacing-06 */
+      color: var(--c-text-primary);
+    }
+    #preview li { margin-bottom: 4px; }
+
+    /* Horizontal rule */
+    #preview hr {
+      border: none;
+      border-top: 1px solid var(--c-border-subtle-00);
+      margin: 16px 0;
+    }
+
+    /* Blockquote — Carbon notification-style left border */
+    #preview blockquote {
+      margin: 0 0 12px;
+      padding: 8px 16px;
+      border-left: 4px solid var(--c-border-strong-01);
+      background: var(--c-field-01);
+      color: var(--c-text-secondary);
+      font-style: italic;
+    }
+
+    /* Links — Carbon $link-primary */
+    #preview a {
+      color: #78a9ff; /* $link-inverse (dark); overridden in light */
+      text-decoration: none;
+    }
+    :root[data-theme="light"] #preview a {
+      color: #0f62fe; /* $link-primary White theme */
+    }
+    #preview a:hover { text-decoration: underline; }
+
+    /*
+     * Inline code — Carbon Code Snippet inline style
+     * bg: $layer-02 (one layer above $layer-01 preview bg)
+     * border-radius: 2px, padding: 0 $spacing-03 (8px)
+     */
+    #preview code {
+      font-family: 'IBM Plex Mono', 'Menlo', 'Consolas', monospace;
+      font-size: 0.8125rem; /* 13px */
+      background: var(--c-field-01);
+      color: var(--c-text-primary);
+      border-radius: 2px; /* Carbon code-snippet border-radius */
+      padding: 1px 6px;
+    }
+
+    /*
+     * Fenced code block — Carbon multi-line Code Snippet
+     * position:relative so the copy-to-terminal button can be absolute
+     */
+    #preview pre {
+      position: relative;
+      margin: 0 0 12px;
+      padding: 16px; /* $spacing-05 */
+      /* top padding increased to 36px to clear the button row */
+      padding-top: 36px;
+      background: var(--c-field-01);
+      border: 1px solid var(--c-border-subtle-00);
+      border-radius: 0;
+      overflow-x: auto;
+    }
+    #preview pre code {
+      background: none;
+      border-radius: 0;
+      padding: 0;
+      font-size: 0.8125rem;
+      line-height: 1.5;
+    }
+
+    /*
+     * Copy-to-terminal button — Carbon ghost button, small (24px)
+     * Positioned top-right of the <pre> block.
+     * At rest: invisible (opacity 0); visible on pre:hover.
+     * After send: brief "✓ Sent" confirmation label.
+     */
+    #preview pre .send-to-term {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      height: 24px;
+      padding: 0 8px; /* $spacing-03 */
+      background: transparent;
+      border: 1px solid var(--c-border-subtle-00);
+      border-radius: 0;
+      cursor: pointer;
+      color: var(--c-text-secondary);
+      font-family: 'IBM Plex Sans', 'Helvetica Neue', Arial, sans-serif;
+      font-size: 0.6875rem; /* 11px — helper text scale */
+      font-weight: 400;
+      letter-spacing: 0.32px;
+      white-space: nowrap;
+      opacity: 0;
+      transition: opacity 70ms cubic-bezier(0.2, 0, 0.38, 0.9),
+                  background 70ms cubic-bezier(0.2, 0, 0.38, 0.9);
+      user-select: none;
+    }
+
+    /* Reveal on pre hover */
+    #preview pre:hover .send-to-term { opacity: 1; }
+
+    #preview pre .send-to-term:hover {
+      background: var(--c-icon-hover-bg);
+      color: var(--c-text-primary);
+      border-color: var(--c-border-strong-01);
+    }
+
+    #preview pre .send-to-term:focus-visible {
+      outline: 2px solid var(--c-focus);
+      outline-offset: -2px;
+      opacity: 1;
+    }
+
+    /* Confirmation state */
+    #preview pre .send-to-term.sent {
+      opacity: 1;
+      color: var(--c-support-success);
+      border-color: var(--c-support-success);
+    }
+
+    /* Tables — Carbon Data Table minimal style */
+    #preview table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0 0 12px;
+      font-size: 0.875rem;
+    }
+    #preview th {
+      background: var(--c-field-01);
+      color: var(--c-text-secondary);
+      font-weight: 600;
+      text-align: left;
+      padding: 8px 16px;
+      border-bottom: 2px solid var(--c-border-strong-01);
+    }
+    #preview td {
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--c-border-subtle-00);
+      color: var(--c-text-primary);
+    }
+    #preview tr:hover td { background: var(--c-layer-hover-01); }
+
+    /* Strong / em */
+    #preview strong { font-weight: 600; color: var(--c-text-primary); }
+    #preview em     { font-style: italic; color: var(--c-text-secondary); }
+  </style>
+</head>
+<body>
+  <div id="layout">
+    <div id="terminal-panel">
+      <iframe src="/ttyd/" title="Terminal"></iframe>
+    </div>
+    <div id="divider"></div>
+    <div id="notes-panel">
+      <div id="notes-toolbar">
+        <span id="notes-title">
+          <!-- Carbon Terminal 32 icon, scaled to 16px -->
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+            <path d="M26,4H6A2,2,0,0,0,4,6V26a2,2,0,0,0,2,2H26a2,2,0,0,0,2-2V6A2,2,0,0,0,26,4Zm0,2v4H6V6ZM6,26V12H26V26Z" transform="translate(0 0.01)"/>
+            <polygon points="10.76 16.18 13.58 19.01 10.76 21.84 12.17 23.25 16.41 19.01 12.17 14.77 10.76 16.18"/>
+          </svg>
+          Notes
+        </span>
+        <span id="save-indicator" aria-live="polite"></span>
+        <span id="toolbar-spacer"></span>
+        <!-- View icon (Carbon View 16) — show/hide markdown preview -->
+        <button id="preview-toggle" type="button" class="toolbar-btn" title="Toggle preview" aria-label="Toggle markdown preview" aria-pressed="false">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M15.5,7.8C14.3,4.7,11.3,2.6,8,2.5C4.7,2.6,1.7,4.7,0.5,7.8c0,0.1,0,0.2,0,0.3c1.2,3.1,4.1,5.2,7.5,5.3c3.3-0.1,6.3-2.2,7.5-5.3C15.5,8.1,15.5,7.9,15.5,7.8zM8,12.5c-2.7,0-5.4-2-6.5-4.5c1-2.5,3.8-4.5,6.5-4.5s5.4,2,6.5,4.5C13.4,10.5,10.6,12.5,8,12.5z"/>
+            <path d="M8,5C6.3,5,5,6.3,5,8s1.3,3,3,3s3-1.3,3-3S9.7,5,8,5zM8,10c-1.1,0-2-0.9-2-2s0.9-2,2-2s2,0.9,2,2S9.1,10,8,10z"/>
+          </svg>
+        </button>
+        <!-- Theme toggle: AsleepFilled (dark mode) / Awake (light mode) — icon swapped by JS -->
+        <button id="theme-toggle" type="button" class="toolbar-btn" title="Toggle dark / light mode" aria-label="Toggle theme"></button>
+      </div>
+      <div id="notes-textarea-wrap" data-mode="edit">
+        <textarea id="notes" placeholder="Write markdown here…" spellcheck="false"></textarea>
+        <div id="preview" aria-label="Markdown preview" role="region"></div>
+      </div>
+    </div>
+  </div>
+  <script src="/marked.min.js"></script>
+  <script>
+    const textarea      = document.getElementById('notes');
+    const preview       = document.getElementById('preview');
+    const wrap          = document.getElementById('notes-textarea-wrap');
+    const indicator     = document.getElementById('save-indicator');
+    const themeToggle   = document.getElementById('theme-toggle');
+    const previewToggle = document.getElementById('preview-toggle');
+    const NOTES_KEY = 'tsminal_notes';
+    const THEME_KEY = 'tsminal_theme';
+    let saveTimer;
+
+    // ── marked.js ─────────────────────────────────────────────────
+    marked.setOptions({ breaks: true, gfm: true });
+
+    // Send a string to the ttyd terminal via the iframe's xterm instance.
+    // term.input() feeds data directly into the pty over the existing WS.
+    function sendToTerminal(text) {
+      try {
+        const term = document.querySelector('#terminal-panel iframe').contentWindow.term;
+        if (!term) return false;
+        term.input(text);
+        return true;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // Inject a "Send to terminal" button into every <pre> block after render.
+    function addSendButtons() {
+      preview.querySelectorAll('pre').forEach(pre => {
+        if (pre.querySelector('.send-to-term')) return; // already added
+        const code = pre.querySelector('code');
+        if (!code) return;
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'send-to-term';
+        btn.setAttribute('aria-label', 'Send code block to terminal');
+        btn.innerHTML = '&#x2325; Run in terminal'; // ⌥ arrow icon + label
+
+        btn.addEventListener('click', () => {
+          const text = code.innerText;
+          // Append newline so the command executes immediately
+          const ok = sendToTerminal(text.endsWith('\n') ? text : text + '\n');
+          if (ok) {
+            btn.textContent = '✓ Sent';
+            btn.classList.add('sent');
+            setTimeout(() => {
+              btn.innerHTML = '&#x2325; Run in terminal';
+              btn.classList.remove('sent');
+            }, 1500);
+          }
+        });
+
+        pre.insertBefore(btn, pre.firstChild);
+      });
+    }
+
+    function renderMarkdown(src) {
+      preview.innerHTML = src.trim() ? marked.parse(src) : '';
+      addSendButtons();
+    }
+
+    // ── Theme icons ────────────────────────────────────────────────
+    // AsleepFilled 32 (crescent moon) — shown when in dark mode (click → go light)
+    const SVG_ASLEEP = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M14.98,3a1.0024,1.0024,0,0,0-.1746.0156A13.0959,13.0959,0,0,0,16.63,28.9973c.1641.006.3282,0,.4909,0a13.0724,13.0724,0,0,0,10.702-5.5556,1.0094,1.0094,0,0,0-.7833-1.5644A13.08,13.08,0,0,1,15.8892,4.38,1.0149,1.0149,0,0,0,14.98,3Z"/></svg>`;
+
+    // Awake 16 (sun with rays) — shown when in light mode (click → go dark)
+    const SVG_AWAKE = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true" focusable="false"><rect x="7.5" y="1" width="1" height="2.5"/><rect x="10.8" y="3.4" transform="matrix(0.7071 -0.7071 0.7071 0.7071 0.763 9.6862)" width="2.5" height="1"/><rect x="12.5" y="7.5" width="2.5" height="1"/><rect x="11.6" y="10.8" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -5.0012 12.0762)" width="1" height="2.5"/><rect x="7.5" y="12.5" width="1" height="2.5"/><rect x="2.7" y="11.6" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -7.3897 6.3156)" width="2.5" height="1"/><rect x="1" y="7.5" width="2.5" height="1"/><rect x="3.4" y="2.7" transform="matrix(0.7071 -0.7071 0.7071 0.7071 -1.6256 3.9256)" width="1" height="2.5"/><path d="M8,6c1.1,0,2,0.9,2,2s-0.9,2-2,2S6,9.1,6,8S6.9,6,8,6 M8,5C6.3,5,5,6.3,5,8s1.3,3,3,3s3-1.3,3-3S9.7,5,8,5z"/></svg>`;
+
+    function updateThemeIcon(theme) {
+      // dark mode → show AsleepFilled (moon); light mode → show Awake (sun)
+      themeToggle.innerHTML = theme === 'light' ? SVG_AWAKE : SVG_ASLEEP;
+    }
+
+    // ── Theme ──────────────────────────────────────────────────────
+    function applyTheme(theme) {
+      document.documentElement.dataset.theme = theme;
+      localStorage.setItem(THEME_KEY, theme);
+      updateThemeIcon(theme);
+    }
+
+    const savedTheme = localStorage.getItem(THEME_KEY);
+    if (savedTheme) {
+      applyTheme(savedTheme);
+    } else if (window.matchMedia('(prefers-color-scheme: light)').matches) {
+      applyTheme('light');
+    } else {
+      // Default: dark — no theme data-attribute set, just render the moon icon
+      updateThemeIcon('dark');
+    }
+
+    themeToggle.addEventListener('click', () => {
+      const current = document.documentElement.dataset.theme;
+      applyTheme(current === 'light' ? 'dark' : 'light');
+    });
+
+    // ── Preview toggle ─────────────────────────────────────────────
+    previewToggle.addEventListener('click', () => {
+      const isPreview = wrap.dataset.mode === 'preview';
+      if (isPreview) {
+        wrap.dataset.mode = 'edit';
+        previewToggle.setAttribute('aria-pressed', 'false');
+        textarea.focus();
+      } else {
+        renderMarkdown(textarea.value);
+        wrap.dataset.mode = 'preview';
+        previewToggle.setAttribute('aria-pressed', 'true');
+      }
+    });
+
+    // ── Auto-save ──────────────────────────────────────────────────
+    const saved = localStorage.getItem(NOTES_KEY);
+    if (saved !== null) {
+      textarea.value = saved;
+    }
+
+    function showSaved() {
+      indicator.textContent = 'Saved';
+      indicator.className = 'saved';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        indicator.textContent = '';
+        indicator.className = '';
+      }, 2000);
+    }
+
+    textarea.addEventListener('input', () => {
+      indicator.textContent = 'Saving…';
+      indicator.className = '';
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        localStorage.setItem(NOTES_KEY, textarea.value);
+        showSaved();
+      }, 500);
+    });
+  </script>
+</body>
+</html>

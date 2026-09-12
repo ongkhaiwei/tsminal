@@ -1,0 +1,148 @@
+# ============================================================
+# Tsminal — OpenShift Deployment Manifests
+# ============================================================
+#
+# Resources defined in this file (in order):
+#   1. Namespace         (optional — remove if deploying into an existing project)
+#   2. Deployment
+#   3. Service
+#   4. Route
+#
+# Prerequisites
+# -------------
+# Tsminal runs as root inside the container (ttyd requires a real
+# login shell). OpenShift blocks this by default. Before applying,
+# grant the 'anyuid' SCC to the service account in your project:
+#
+#   oc adm policy add-scc-to-serviceaccount anyuid \
+#       -z default -n tsterminal
+#
+# Apply
+# -----
+#   oc apply -f deploy/openshift.yaml
+#
+# ============================================================
+
+---
+# 1. Namespace (project)
+# Remove this block if you are deploying into an existing OpenShift project.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: tsterminal
+  labels:
+    app.kubernetes.io/name: tsterminal
+
+---
+# 2. Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tsterminal
+  namespace: tsterminal
+  labels:
+    app: tsterminal
+    app.kubernetes.io/name: tsterminal
+    app.kubernetes.io/component: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tsterminal
+  template:
+    metadata:
+      labels:
+        app: tsterminal
+        app.kubernetes.io/name: tsterminal
+    spec:
+      # ── Security context ─────────────────────────────────────────
+      # ttyd opens a pty and runs /bin/sh as root.
+      # Requires the 'anyuid' SCC assigned to the default service account
+      # (see prerequisites above).
+      securityContext:
+        runAsUser: 0          # root — required by ttyd
+        runAsNonRoot: false
+      containers:
+        - name: tsterminal
+          image: tsterminal:latest   # replace with your registry path, e.g. quay.io/yourorg/tsterminal:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          # ── Resource limits ──────────────────────────────────────
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          # ── Security context (container level) ───────────────────
+          securityContext:
+            runAsUser: 0
+            runAsNonRoot: false
+            allowPrivilegeEscalation: false   # ttyd does not need setuid/setgid
+            capabilities:
+              drop:
+                - ALL               # drop all Linux capabilities
+          # ── Probes ───────────────────────────────────────────────
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            failureThreshold: 3
+
+---
+# 3. Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: tsterminal
+  namespace: tsterminal
+  labels:
+    app: tsterminal
+    app.kubernetes.io/name: tsterminal
+spec:
+  selector:
+    app: tsterminal
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+      protocol: TCP
+
+---
+# 4. Route (OpenShift-native ingress)
+# Exposes the service externally via the OpenShift router.
+# The host is auto-assigned by OpenShift if left empty; set it explicitly
+# for a predictable URL, e.g.: tsterminal.apps.your-cluster.example.com
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: tsterminal
+  namespace: tsterminal
+  labels:
+    app: tsterminal
+    app.kubernetes.io/name: tsterminal
+spec:
+  # host: tsterminal.apps.your-cluster.example.com   # uncomment to pin the hostname
+  to:
+    kind: Service
+    name: tsterminal
+    weight: 100
+  port:
+    targetPort: http
+  tls:
+    termination: edge               # TLS terminated at the OpenShift router
+    insecureEdgeTerminationPolicy: Redirect   # HTTP → HTTPS redirect
+  wildcardPolicy: None
