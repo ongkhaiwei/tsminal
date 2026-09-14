@@ -1,6 +1,15 @@
 #!/bin/sh
 set -e
 
+# Create nginx tmp dirs at runtime — /tmp is ephemeral and must be
+# initialised on every container start, not at image build time.
+mkdir -p \
+    /tmp/nginx/client_body \
+    /tmp/nginx/proxy \
+    /tmp/nginx/fastcgi \
+    /tmp/nginx/uwsgi \
+    /tmp/nginx/scgi
+
 # Start ttyd on localhost only (Nginx will proxy /ttyd/ to it)
 # --base-path /ttyd  → ttyd serves its own JS/CSS assets under /ttyd/
 # --writable          → allow keyboard input
@@ -10,7 +19,7 @@ ttyd \
   --interface 127.0.0.1 \
   --base-path /ttyd \
   --writable \
-  /bin/sh &
+  /bin/bash -i -l &
 
 # Start Nginx in the foreground (keeps the container alive)
 exec nginx -c /etc/nginx/nginx.conf -g "daemon off;"

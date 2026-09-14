@@ -1,0 +1,105 @@
+# ============================================================
+# Tsminal — OpenShift Build Manifests
+# ============================================================
+#
+# Resources defined in this file (in order):
+#   1. ImageStream   — local registry target for the built image
+#   2. BuildConfig   — Docker-strategy build from the Git source
+#
+# Prerequisites
+# -------------
+# The 'tsminal' namespace must exist before applying.
+# Apply openshift-scc.yaml and openshift.yaml first if it does not:
+#
+#   oc apply -f deploy/openshift-scc.yaml
+#   oc apply -f deploy/openshift.yaml
+#
+# Apply
+# -----
+#   oc apply -f deploy/openshift-build.yaml
+#
+# Trigger a build manually:
+#   oc start-build tsminal -n tsminal --follow
+#
+# After the build completes, the Deployment will automatically pull
+# the new image from the internal registry because the ImageStream
+# trigger is wired up in openshift.yaml (image: tsminal:latest).
+#
+# To wire the Deployment image to this ImageStream automatically, run:
+#   oc set triggers deployment/tsminal \
+#       --from-image=tsminal:latest \
+#       --containers=tsminal \
+#       -n tsminal
+#
+# ============================================================
+
+---
+# 1. ImageStream
+# Provides a stable internal-registry reference that the Deployment pulls from.
+# OpenShift updates the tag pointer each time a build succeeds.
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  name: tsminal
+  namespace: tsminal
+  labels:
+    app: tsminal
+    app.kubernetes.io/name: tsminal
+spec:
+  lookupPolicy:
+    local: true   # allows Deployments to reference the ImageStream tag directly
+
+---
+# 2. BuildConfig
+# Builds the container image using the Dockerfile at the repository root.
+apiVersion: build.openshift.io/v1
+kind: BuildConfig
+metadata:
+  name: tsminal
+  namespace: tsminal
+  labels:
+    app: tsminal
+    app.kubernetes.io/name: tsminal
+spec:
+  # ── Source ────────────────────────────────────────────────────────────
+  source:
+    type: Git
+    git:
+      uri: https://github.com/ongkhaiwei/tsminal.git   # ← replace with your repo URL
+      ref: main                                        # ← branch / tag to build from
+    # contextDir is intentionally omitted — the Dockerfile is at the repo root
+    # If your repo requires authentication, create a source secret and uncomment:
+    # sourceSecret:
+    #   name: tsminal-git-secret
+
+  # ── Strategy ──────────────────────────────────────────────────────────
+  strategy:
+    type: Docker
+    dockerStrategy:
+      dockerfilePath: Dockerfile   # relative to contextDir (repo root)
+      # noCache: true              # uncomment to disable layer caching
+
+  # ── Output ────────────────────────────────────────────────────────────
+  output:
+    to:
+      kind: ImageStreamTag
+      name: tsminal:latest   # pushes the result to the ImageStream above
+
+  # ── Triggers ──────────────────────────────────────────────────────────
+  triggers:
+    - type: ConfigChange   # rebuild automatically when this BuildConfig changes
+    - type: GitHub         # rebuild on GitHub webhook push
+      github:
+        secret: tsminal-github-webhook-secret   # create with: oc create secret generic ...
+    - type: Generic        # rebuild via generic webhook (CI systems, curl, etc.)
+      generic:
+        secret: tsminal-generic-webhook-secret
+
+  # ── Resource limits for the build pod ─────────────────────────────────
+  resources:
+    requests:
+      cpu: "200m"
+      memory: "256Mi"
+    limits:
+      cpu: "1"
+      memory: "1Gi"

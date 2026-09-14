@@ -481,7 +481,7 @@
 <body>
   <div id="layout">
     <div id="terminal-panel">
-      <iframe src="/ttyd/" title="Terminal"></iframe>
+      <iframe src="/ttyd/" title="Terminal" allowfullscreen></iframe>
     </div>
     <div id="divider"></div>
     <div id="notes-panel">
@@ -514,6 +514,20 @@
   </div>
   <script src="/marked.min.js"></script>
   <script>
+    // Prevent the parent page from consuming Tab / Arrow keys when the
+    // terminal iframe has focus — these must pass through to xterm.js inside.
+    window.addEventListener('keydown', e => {
+      const PASS_THROUGH = ['Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
+      if (PASS_THROUGH.includes(e.key)) {
+        const active = document.activeElement;
+        // If the iframe itself is focused (user clicked terminal), suppress default
+        if (active && active.tagName === 'IFRAME') {
+          e.stopPropagation();
+          // Do NOT call preventDefault() — let the event reach the iframe's content
+        }
+      }
+    }, true); // capture phase so we get it before any other handler
+
     const textarea      = document.getElementById('notes');
     const preview       = document.getElementById('preview');
     const wrap          = document.getElementById('notes-textarea-wrap');

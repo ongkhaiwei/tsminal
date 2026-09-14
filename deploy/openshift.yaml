@@ -69,7 +69,7 @@ spec:
         runAsNonRoot: false
       containers:
         - name: tsminal
-          image: tsminal:latest   # replace with your registry path, e.g. quay.io/yourorg/tsminal:latest
+          image: ongkhaiwei/tsminal:latest   # resolved from the ImageStream by openshift-build.yaml
           imagePullPolicy: Always
           ports:
             - name: http
