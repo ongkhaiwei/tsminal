@@ -541,17 +541,23 @@
     // ── marked.js ─────────────────────────────────────────────────
     marked.setOptions({ breaks: true, gfm: true });
 
-    // Send a string to the ttyd terminal via the iframe's xterm instance.
-    // term.input() feeds data directly into the pty over the existing WS.
-    function sendToTerminal(text) {
+    // Send text to the ttyd terminal via window.term.input() on the iframe.
+    // ttyd sets window.term on its contentWindow after the WS handshake completes.
+    // term.input() feeds the string directly into xterm's data handlers → pty stdin.
+    function getIframeTerm() {
       try {
-        const term = document.querySelector('#terminal-panel iframe').contentWindow.term;
-        if (!term) return false;
-        term.input(text);
-        return true;
+        return document.querySelector('#terminal-panel iframe').contentWindow.term;
       } catch (e) {
-        return false;
+        return null;
       }
+    }
+
+    function sendToTerminal(text) {
+      const term = getIframeTerm();
+      if (!term) return false;
+      // term.paste() is the public xterm.js API that fires onData → ttyd sendData → pty
+      term.paste(text);
+      return true;
     }
 
     // Inject a "Send to terminal" button into every <pre> block after render.
