@@ -1,0 +1,39 @@
+# ============================================================
+# Tsminal — SCC (SecurityContextConstraints) Grant
+# ============================================================
+#
+# OpenShift blocks containers from running as root (UID 0) by default.
+# This manifest grants the 'anyuid' SCC to the 'default' ServiceAccount
+# in the 'tsminal' namespace, which allows the Tsminal pod to run
+# as root as required by ttyd.
+#
+# Apply BEFORE (or together with) openshift.yaml:
+#
+#   oc apply -f deploy/openshift-scc.yaml
+#   oc apply -f deploy/openshift.yaml
+#
+# Alternatively, use the equivalent imperative command:
+#
+#   oc adm policy add-scc-to-serviceaccount anyuid \
+#       -z default -n tsminal
+#
+# ============================================================
+
+---
+# Binds the built-in 'anyuid' SCC to the default ServiceAccount.
+# 'anyuid' permits any UID (including 0 / root) while still
+# enforcing the container-level securityContext defined in the Deployment.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tsminal-anyuid
+  labels:
+    app.kubernetes.io/name: tsminal
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: tsminal
+roleRef:
+  kind: ClusterRole
+  name: system:openshift:scc:anyuid   # built-in ClusterRole that grants the anyuid SCC
+  apiGroup: rbac.authorization.k8s.io
