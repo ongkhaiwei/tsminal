@@ -11,11 +11,16 @@
 # Prerequisites
 # -------------
 # Tsminal runs as root inside the container (ttyd requires a real
-# login shell). OpenShift blocks this by default. Before applying,
-# grant the 'anyuid' SCC to the service account in your project:
+# login shell). OpenShift blocks this by default. Apply the SCC grant
+# manifest first (declarative), then this file:
+#
+#   oc apply -f deploy/openshift-scc.yaml
+#   oc apply -f deploy/openshift.yaml
+#
+# Or use the equivalent imperative command instead of openshift-scc.yaml:
 #
 #   oc adm policy add-scc-to-serviceaccount anyuid \
-#       -z default -n tsterminal
+#       -z default -n tsminal
 #
 # Apply
 # -----
@@ -29,31 +34,31 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: tsterminal
+  name: tsminal
   labels:
-    app.kubernetes.io/name: tsterminal
+    app.kubernetes.io/name: tsminal
 
 ---
 # 2. Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: tsterminal
-  namespace: tsterminal
+  name: tsminal
+  namespace: tsminal
   labels:
-    app: tsterminal
-    app.kubernetes.io/name: tsterminal
+    app: tsminal
+    app.kubernetes.io/name: tsminal
     app.kubernetes.io/component: web
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: tsterminal
+      app: tsminal
   template:
     metadata:
       labels:
-        app: tsterminal
-        app.kubernetes.io/name: tsterminal
+        app: tsminal
+        app.kubernetes.io/name: tsminal
     spec:
       # ── Security context ─────────────────────────────────────────
       # ttyd opens a pty and runs /bin/sh as root.
@@ -63,8 +68,8 @@ spec:
         runAsUser: 0          # root — required by ttyd
         runAsNonRoot: false
       containers:
-        - name: tsterminal
-          image: tsterminal:latest   # replace with your registry path, e.g. quay.io/yourorg/tsterminal:latest
+        - name: tsminal
+          image: tsminal:latest   # replace with your registry path, e.g. quay.io/yourorg/tsminal:latest
           imagePullPolicy: Always
           ports:
             - name: http
@@ -107,14 +112,14 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: tsterminal
-  namespace: tsterminal
+  name: tsminal
+  namespace: tsminal
   labels:
-    app: tsterminal
-    app.kubernetes.io/name: tsterminal
+    app: tsminal
+    app.kubernetes.io/name: tsminal
 spec:
   selector:
-    app: tsterminal
+    app: tsminal
   ports:
     - name: http
       port: 8080
@@ -125,20 +130,20 @@ spec:
 # 4. Route (OpenShift-native ingress)
 # Exposes the service externally via the OpenShift router.
 # The host is auto-assigned by OpenShift if left empty; set it explicitly
-# for a predictable URL, e.g.: tsterminal.apps.your-cluster.example.com
+# for a predictable URL, e.g.: tsminal.apps.your-cluster.example.com
 apiVersion: route.openshift.io/v1
 kind: Route
 metadata:
-  name: tsterminal
-  namespace: tsterminal
+  name: tsminal
+  namespace: tsminal
   labels:
-    app: tsterminal
-    app.kubernetes.io/name: tsterminal
+    app: tsminal
+    app.kubernetes.io/name: tsminal
 spec:
-  # host: tsterminal.apps.your-cluster.example.com   # uncomment to pin the hostname
+  # host: tsminal.apps.your-cluster.example.com   # uncomment to pin the hostname
   to:
     kind: Service
-    name: tsterminal
+    name: tsminal
     weight: 100
   port:
     targetPort: http
